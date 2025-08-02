@@ -1,3 +1,4 @@
+#以下依赖版本适配pytorch2.1 cuda11.8
 # 核心图像处理
 opencv-python-headless==4.9.0.80  # 使用 headless 版本，兼容 NumPy 1.x
 scikit-image==0.25.2
@@ -43,3 +44,4 @@ gradio
 # 特定平台依赖
 onnxruntime-directml==1.15.1; sys_platform == 'win32'  # 保持版本一致
 PySimpleGUI-4-foss==4.60.4.1; sys_platform == 'win32'
+
