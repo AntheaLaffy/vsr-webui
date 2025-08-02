@@ -47,8 +47,8 @@ class SubtitleDetect:
         args = utility.parse_args()
         args.det_algorithm = 'DB'
         args.det_model_dir = self.convertToOnnxModelIfNeeded(config.DET_MODEL_PATH)
-        args.use_onnx=len(config.ONNX_PROVIDERS) > 0
-        args.onnx_providers=config.ONNX_PROVIDERS
+        args.use_onnx = len(config.ONNX_PROVIDERS) > 0
+        args.onnx_providers = config.ONNX_PROVIDERS
         return TextDetector(args)
 
     def detect_subtitle(self, img):
@@ -129,18 +129,19 @@ class SubtitleDetect:
                 new_subtitle_frame_no_box_dict[key] = subtitle_frame_no_box_dict[key]
         return new_subtitle_frame_no_box_dict
 
-    def convertToOnnxModelIfNeeded(self, model_dir, model_filename="inference.pdmodel", params_filename="inference.pdiparams", opset_version=14):
+    def convertToOnnxModelIfNeeded(self, model_dir, model_filename="inference.pdmodel",
+                                   params_filename="inference.pdiparams", opset_version=14):
         """Converts a Paddle model to ONNX if ONNX providers are available and the model does not already exist."""
-        
+
         if not config.ONNX_PROVIDERS:
             return model_dir
-        
+
         onnx_model_path = os.path.join(model_dir, "model.onnx")
 
         if os.path.exists(onnx_model_path):
             print(f"ONNX model already exists: {onnx_model_path}. Skipping conversion.")
             return onnx_model_path
-        
+
         print(f"Converting Paddle model {model_dir} to ONNX...")
         model_file = os.path.join(model_dir, model_filename)
         params_file = os.path.join(model_dir, params_filename) if params_filename else ""
@@ -173,7 +174,6 @@ class SubtitleDetect:
         except Exception as e:
             print(f"Error during conversion: {e}")
             return model_dir
-
 
     @staticmethod
     def split_range_by_scene(intervals, points):
@@ -239,7 +239,8 @@ class SubtitleDetect:
                 new_unify_values = []
 
                 for idx, region in enumerate(current_regions):
-                    last_standard_region = unify_value_map[last_key][idx] if idx < len(unify_value_map[last_key]) else None
+                    last_standard_region = unify_value_map[last_key][idx] if idx < len(
+                        unify_value_map[last_key]) else None
 
                     # 如果当前的区间与前一个键的对应区间相似，我们统一它们
                     if last_standard_region and self.are_similar(region, last_standard_region):
@@ -313,7 +314,8 @@ class SubtitleDetect:
         return Polygon([[s_xmin, s_ymin], [s_xmax, s_ymin], [s_xmax, s_ymax], [s_xmin, s_ymax]])
 
     @staticmethod
-    def expand_and_merge_intervals(intervals, expand_size=config.STTN_NEIGHBOR_STRIDE*config.STTN_REFERENCE_LENGTH, max_length=config.STTN_MAX_LOAD_NUM):
+    def expand_and_merge_intervals(intervals, expand_size=config.STTN_NEIGHBOR_STRIDE * config.STTN_REFERENCE_LENGTH,
+                                   max_length=config.STTN_MAX_LOAD_NUM):
         # 初始化输出区间列表
         expanded_intervals = []
 
@@ -382,10 +384,12 @@ class SubtitleDetect:
         for start, end in expanded[1:]:
             last_start, last_end = merged[-1]
             # 检查是否重叠
-            if start <= last_end and (end - last_start + 1 < target_length or last_end - last_start + 1 < target_length):
+            if start <= last_end and (
+                    end - last_start + 1 < target_length or last_end - last_start + 1 < target_length):
                 # 需要合并
                 merged[-1] = (last_start, max(last_end, end))  # 合并区间
-            elif start == last_end + 1 and (end - last_start + 1 < target_length or last_end - last_start + 1 < target_length):
+            elif start == last_end + 1 and (
+                    end - last_start + 1 < target_length or last_end - last_start + 1 < target_length):
                 # 相邻区间也需要合并的场景
                 merged[-1] = (last_start, end)
             else:
@@ -563,8 +567,64 @@ class SubtitleDetect:
 
 
 class SubtitleRemover:
-    def __init__(self, vd_path, sub_area=None, gui_mode=False):
+    def __init__(self, vd_path, sub_area=None, gui_mode=False, custom_config=None):  # 添加 custom_config 参数
         importlib.reload(config)
+        print(f"Initializing SubtitleRemover with config: {custom_config}")
+        # 新增：中止事件
+        self.abort_event = None  # 将在运行时由WebUI设置
+
+        # 应用自定义配置
+        if custom_config:
+            for key, value in custom_config.items():
+                try:
+                    # 打印每个配置项的键值
+                    print(f"Setting config: {key} = {value} (type: {type(value).__name__})")
+
+                    if key == "mode":
+                        # 处理模式：从字符串转换为枚举
+                        if isinstance(value, config.InpaintMode):
+                            current_mode = value
+                        else:
+                            # 确保使用大写字符串
+                            mode_str = str(value).strip().upper()
+                            current_mode = config.InpaintMode[mode_str]
+
+                        # 检查是否支持该模式
+                        if current_mode not in list(config.InpaintMode):
+                            raise ValueError(f"不支持的模式: {current_mode}")
+
+                        print(f"Setting MODE to {current_mode.name}")
+                        config.MODE = current_mode
+
+                    elif key == "sttn_skip_detection" or key == "lama_super_fast":
+                        # 处理布尔值
+                        config_value = bool(value)
+                        print(f"Setting {key.upper()} to {config_value}")
+                        setattr(config, key.upper(), config_value)
+
+                    elif key in ["sttn_neighbor_stride", "sttn_reference_length",
+                                 "sttn_max_load_num", "propainter_max_load_num"]:
+                        # 处理整数值
+                        config_value = max(1, int(value))  # 确保至少为1
+                        # 应用额外范围限制
+                        if key == "sttn_neighbor_stride":
+                            config_value = min(config_value, 200)
+                        elif key == "sttn_reference_length":
+                            config_value = min(config_value, 100)
+                        elif key == "sttn_max_load_num":
+                            config_value = max(50, min(config_value, 500))
+                        elif key == "propainter_max_load_num":
+                            config_value = max(20, min(config_value, 1000))
+
+                        print(f"Setting {key.upper()} to {config_value}")
+                        setattr(config, key.upper(), config_value)
+                    else:
+                        # 其他配置项直接设置
+                        setattr(config, key.upper(), value)
+
+                except Exception as e:
+                    print(f"配置设置错误 ({key}={value}): {str(e)}")
+                    print("使用该配置项的默认值")
         # 线程锁
         self.lock = threading.RLock()
         # 用户指定的字幕区域位置
@@ -586,8 +646,10 @@ class SubtitleRemover:
         # 视频帧率
         self.fps = self.video_cap.get(cv2.CAP_PROP_FPS)
         # 视频尺寸
-        self.size = (int(self.video_cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
-        self.mask_size = (int(self.video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(self.video_cap.get(cv2.CAP_PROP_FRAME_WIDTH)))
+        self.size = (
+        int(self.video_cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(self.video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+        self.mask_size = (
+        int(self.video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(self.video_cap.get(cv2.CAP_PROP_FRAME_WIDTH)))
         self.frame_height = int(self.video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.frame_width = int(self.video_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         # 创建字幕检测对象
@@ -595,7 +657,8 @@ class SubtitleRemover:
         # 创建视频临时对象，windows下delete=True会有permission denied的报错
         self.video_temp_file = tempfile.NamedTemporaryFile(suffix='.mp4', delete=False)
         # 创建视频写对象
-        self.video_writer = cv2.VideoWriter(self.video_temp_file.name, cv2.VideoWriter_fourcc(*'mp4v'), self.fps, self.size)
+        self.video_writer = cv2.VideoWriter(self.video_temp_file.name, cv2.VideoWriter_fourcc(*'mp4v'), self.fps,
+                                            self.size)
         self.video_out_name = os.path.join(os.path.dirname(self.video_path), f'{self.vd_name}_no_sub.mp4')
         self.video_inpaint = None
         self.lama_inpaint = None
@@ -610,10 +673,10 @@ class SubtitleRemover:
         if config.USE_DML:
             print('use DirectML for acceleration')
             if config.MODE != config.InpaintMode.STTN:
-                print('Warning: DirectML acceleration is only available for STTN model. Falling back to CPU for other models.')
+                print(
+                    'Warning: DirectML acceleration is only available for STTN model. Falling back to CPU for other models.')
         for provider in config.ONNX_PROVIDERS:
             print(f"Detected execution provider: {provider}")
-
 
         # 总处理进度
         self.progress_total = 0
@@ -744,14 +807,16 @@ class SubtitleRemover:
                                         self.lama_inpaint = LamaInpaint()
                                     inpainted_frame = self.lama_inpaint(frame, single_mask)
                                     self.video_writer.write(inpainted_frame)
-                                    print(f'write frame: {start_frame_no + inner_index} with mask {sub_list[start_frame_no]}')
+                                    print(
+                                        f'write frame: {start_frame_no + inner_index} with mask {sub_list[start_frame_no]}')
                                     inner_index += 1
                                     self.update_progress(tbar, increment=1)
                                 elif len(batch) > 1:
                                     inpainted_frames = self.video_inpaint.inpaint(batch, mask)
                                     for i, inpainted_frame in enumerate(inpainted_frames):
                                         self.video_writer.write(inpainted_frame)
-                                        print(f'write frame: {start_frame_no + inner_index} with mask {sub_list[index]}')
+                                        print(
+                                            f'write frame: {start_frame_no + inner_index} with mask {sub_list[index]}')
                                         inner_index += 1
                                         if self.gui_mode:
                                             self.preview_frame = cv2.hconcat([batch[i], inpainted_frame])
@@ -766,7 +831,8 @@ class SubtitleRemover:
         if self.sub_area is not None:
             ymin, ymax, xmin, xmax = self.sub_area
         else:
-            print('[Info] No subtitle area has been set. Video will be processed in full screen. As a result, the final outcome might be suboptimal.')
+            print(
+                '[Info] No subtitle area has been set. Video will be processed in full screen. As a result, the final outcome might be suboptimal.')
             ymin, ymax, xmin, xmax = 0, self.frame_height, 0, self.frame_width
         mask_area_coordinates = [(xmin, xmax, ymin, ymax)]
         mask = create_mask(self.mask_size, mask_area_coordinates)
@@ -881,49 +947,78 @@ class SubtitleRemover:
         start_time = time.time()
         # 重置进度条
         self.progress_total = 0
+        # 新增：检查是否已中止
+        if self.abort_event and self.abort_event.is_set():
+            print("处理已中止")
+            return
+
         tbar = tqdm(total=int(self.frame_count), unit='frame', position=0, file=sys.__stdout__,
                     desc='Subtitle Removing')
-        if self.is_picture:
-            sub_list = self.sub_detector.find_subtitle_frame_no(sub_remover=self)
-            self.lama_inpaint = LamaInpaint()
-            original_frame = cv2.imread(self.video_path)
-            if len(sub_list):
-                mask = create_mask(original_frame.shape[0:2], sub_list[1])
-                inpainted_frame = self.lama_inpaint(original_frame, mask)
-            else:
-                inpainted_frame = original_frame
-            if self.gui_mode:
-                self.preview_frame = cv2.hconcat([original_frame, inpainted_frame])
-            cv2.imencode(self.ext, inpainted_frame)[1].tofile(self.video_out_name)
-            tbar.update(1)
-            self.progress_total = 100
-        else:
-            # 精准模式下，获取场景分割的帧号，进一步切割
-            if config.MODE == config.InpaintMode.PROPAINTER:
-                self.propainter_mode(tbar)
-            elif config.MODE == config.InpaintMode.STTN:
-                self.sttn_mode(tbar)
-            else:
-                self.lama_mode(tbar)
-        self.video_cap.release()
-        self.video_writer.release()
-        if not self.is_picture:
-            # 将原音频合并到新生成的视频文件中
-            self.merge_audio_to_video()
-            print(f"[Finished]Subtitle successfully removed, video generated at：{self.video_out_name}")
-        else:
-            print(f"[Finished]Subtitle successfully removed, picture generated at：{self.video_out_name}")
-        print(f'time cost: {round(time.time() - start_time, 2)}s')
-        self.isFinished = True
-        self.progress_total = 100
-        if os.path.exists(self.video_temp_file.name):
-            try:
-                os.remove(self.video_temp_file.name)
-            except Exception:
-                if platform.system() in ['Windows']:
-                    pass
+        try:
+            if self.is_picture:
+                sub_list = self.sub_detector.find_subtitle_frame_no(sub_remover=self)
+                self.lama_inpaint = LamaInpaint()
+                original_frame = cv2.imread(self.video_path)
+                if len(sub_list):
+                    mask = create_mask(original_frame.shape[0:2], sub_list[1])
+                    inpainted_frame = self.lama_inpaint(original_frame, mask)
                 else:
-                    print(f'failed to delete temp file {self.video_temp_file.name}')
+                    inpainted_frame = original_frame
+                if self.gui_mode:
+                    self.preview_frame = cv2.hconcat([original_frame, inpainted_frame])
+                cv2.imencode(self.ext, inpainted_frame)[1].tofile(self.video_out_name)
+                tbar.update(1)
+                self.progress_total = 100
+                # 新增：添加中止检查点
+                if self.abort_event and self.abort_event.is_set():
+                    print("处理已中止")
+                    return
+            else:
+                # 精准模式下，获取场景分割的帧号，进一步切割
+                if config.MODE == config.InpaintMode.PROPAINTER:
+                    self.propainter_mode(tbar)
+                elif config.MODE == config.InpaintMode.STTN:
+                    self.sttn_mode(tbar)
+                else:
+                    self.lama_mode(tbar)
+
+                    # 新增：添加中止检查点
+                    if self.abort_event and self.abort_event.is_set():
+                        print("处理已中止")
+                        return
+
+            self.video_cap.release()
+            self.video_writer.release()
+
+            # 新增：添加中止检查点
+            if self.abort_event and self.abort_event.is_set():
+                print("处理已中止")
+                return
+
+            if not self.is_picture:
+                # 将原音频合并到新生成的视频文件中
+                self.merge_audio_to_video()
+                print(f"[Finished]Subtitle successfully removed, video generated at：{self.video_out_name}")
+            else:
+                print(f"[Finished]Subtitle successfully removed, picture generated at：{self.video_out_name}")
+            print(f'time cost: {round(time.time() - start_time, 2)}s')
+            self.isFinished = True
+            self.progress_total = 100
+            if os.path.exists(self.video_temp_file.name):
+                try:
+                    os.remove(self.video_temp_file.name)
+                except Exception:
+                    if platform.system() in ['Windows']:
+                        pass
+                    else:
+                        print(f'failed to delete temp file {self.video_temp_file.name}')
+
+        except Exception as e:
+            # 新增：捕获异常时检查中止
+            if self.abort_event and self.abort_event.is_set():
+                print("处理已中止")
+            else:
+                raise e
 
     def merge_audio_to_video(self):
         # 创建音频临时对象，windows下delete=True会有permission denied的报错
