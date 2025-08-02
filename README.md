@@ -18,7 +18,7 @@ VSR-WebUI主要实现了以下功能：
 - 支持多选图片批量去除水印文本
 - 使用WebUI降低使用门槛
 
-<p style="text-align:center;"><img src="https://github.com/YaoFANGUK/video-subtitle-remover/raw/main/design/demo.png" alt="demo.png"/></p>
+<p style="text-align:center;"><img src="https://github.com/YaoFANGUK/video-subtitle-remover/raw/main/test/webui.png" alt="webui"/></p>
 
 **VSR-WebUI使用说明**
 
@@ -45,6 +45,8 @@ python webui.py
 ```
 
 **VSR原项目使用说明：**
+
+<p style="text-align:center;"><img src="https://github.com/YaoFANGUK/video-subtitle-remover/raw/main/design/demo.png" alt="demo.png"/></p>
 
 **下载地址：**
 
