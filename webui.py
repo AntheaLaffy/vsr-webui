@@ -292,8 +292,9 @@ class SubtitleRemoverWebUI:
                     self.is_processing = False
                     self.sr = None
 
-                self.processing_thread = threading.Thread(target=run_remover)
-                self.processing_thread.start()
+            # 创建线程并启动（移动到函数外部）
+            self.processing_thread = threading.Thread(target=run_remover)
+            self.processing_thread.start()
 
             # 更新进度
             while self.processing_thread.is_alive():
@@ -344,7 +345,7 @@ class SubtitleRemoverWebUI:
             # STTN参数
             with gr.Group(visible=True) as sttn_params:
                 sttn_skip_detection = gr.Checkbox(
-                    label="跳过字幕检测（提高速度但可能遗漏字幕）",
+                    label="跳过字幕检测（极度不推荐）",
                     value=self.algorithm_params["sttn_skip_detection"],
                     interactive=True
                 )
@@ -361,8 +362,8 @@ class SubtitleRemoverWebUI:
                     interactive=True
                 )
                 sttn_max_load_num = gr.Slider(
-                    minimum=10, maximum=100, step=5,
-                    label="最大处理帧数（值越大效果越好）",
+                    minimum=10, maximum=200, step=5,
+                    label="批处理大小（值越大效果越好）",
                     value=self.algorithm_params["sttn_max_load_num"],
                     interactive=True
                 )
@@ -604,7 +605,7 @@ class SubtitleRemoverWebUI:
             abort_btn.click(
                 fn=self.abort_processing,
                 inputs=[],
-                outputs=[abort_feedback]
+                outputs=[status_display]  # 使用已定义的 status_display 组件
             )
 
             # 添加使用说明
@@ -624,9 +625,9 @@ class SubtitleRemoverWebUI:
 
                 3. **算法参数设置**:
                    - STTN算法：适合真人视频，速度快
-                     - 跳过字幕检测：提高速度但可能遗漏字幕
+                     - 跳过字幕检测：不能提高速度但可能遗漏字幕
                      - 相邻帧步长：值越大处理速度越快
-                     - 参考帧长度：值越大效果越好
+                     - 参考帧长度：值越大效果越好，但太大可能爆显存
                      - 最大处理帧数：值越大效果越好
                    - LAMA算法：适合动画和图片
                      - 极速模式：速度更快但效果稍差
