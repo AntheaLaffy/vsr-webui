@@ -3,7 +3,7 @@
 ## 项目简介
 
 ![License](https://img.shields.io/badge/License-Apache%202-red.svg)
-![python version](https://img.shields.io/badge/Python-3.10+-blue.svg)
+![python version](https://img.shields.io/badge/Python-3.11+-blue.svg)
 ![support os](https://img.shields.io/badge/OS-Windows/macOS/Linux-green.svg)  
 
 VSR-WebUI fork自YaoFANGUK的VSR项目，继承GPL v2协议
