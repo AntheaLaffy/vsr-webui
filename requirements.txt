@@ -1,27 +1,45 @@
-av==14.2.0
-click==8.2.2
-einops==0.8.1
-fsplit==1.0.0
-gradio==5.39.0
-imageio_ffmpeg==0.6.0
-lpips==0.1.4
-matplotlib==3.10.5
-numpy==2.3.2
-onnxruntime==1.21.0
-opencv_python==4.11.0.86
-paddle==1.0.2
-paddle2onnx==2.0.1
-paddleocr==3.1.0
-Pillow==11.3.0
-platformdirs==4.3.8
-pysimplegui==5.0.8.2
-qpt==1.0b8
-RAFT==1.6
-scipy==1.16.1
-Shapely==2.1.1
-skimage==0.0
-tensorboardX==2.6.4
-torch==2.6.0
-torch_directml==0.2.5.dev240914
-torchvision==0.22.1
+# 核心图像处理
+opencv-python-headless==4.9.0.80  # 使用 headless 版本，兼容 NumPy 1.x
+scikit-image==0.25.2
+imgaug==0.4.0
+pyclipper==1.3.0.post6
+albumentations~=1.4.10
+
+# 数据处理和序列化
+numpy==1.26.4  # 降级以兼容 PyTorch 和 OpenCV
+pandas==2.2.3
+PyYAML==6.0.2
+lmdb==1.6.2
+protobuf==6.30.2
+webdataset==0.2.111
+
+# 配置管理
+omegaconf==2.3.0
+easydict==1.13
+
+# 机器学习框架
+torch==2.1.0
+torchvision==0.16.0
+torchaudio==2.1.0
+scikit-learn==1.6.1
+
+# 视频处理
+av==14.3.0
+
+# PaddlePaddle 相关
+paddlepaddle-gpu==2.5.0.post118  # 明确指定 CUDA 11.8 版本
+paddleocr==2.10.0
+paddle2onnx==1.3.1
+
+# ONNX 运行时
+onnxruntime-gpu==1.15.1  # 支持 CUDA 11.8 的最后一个版本
+
+# 其他工具
 tqdm==4.67.1
+einops==0.8.1
+filesplit==3.0.2
+gradio
+
+# 特定平台依赖
+onnxruntime-directml==1.15.1; sys_platform == 'win32'  # 保持版本一致
+PySimpleGUI-4-foss==4.60.4.1; sys_platform == 'win32'
