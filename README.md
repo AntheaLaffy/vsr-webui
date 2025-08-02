@@ -6,20 +6,36 @@
 ![python version](https://img.shields.io/badge/Python-3.11+-blue.svg)
 ![support os](https://img.shields.io/badge/OS-Windows/macOS/Linux-green.svg)  
 
+VSR-WebUI fork自YaoFANGUK的VSR项目，继承GPL v2协议
+
 Video-subtitle-remover (VSR) 是一款基于AI技术，将视频中的硬字幕去除的软件。
-主要实现了以下功能：
+
+VSR-WebUI主要实现了以下功能：
 - **无损分辨率**将视频中的硬字幕去除，生成去除字幕后的文件
 - 通过超强AI算法模型，对去除字幕文本的区域进行填充（非相邻像素填充与马赛克去除）
 - 支持自定义字幕位置，仅去除定义位置中的字幕（传入位置）
 - 支持全视频自动去除所有文本（不传入位置）
 - 支持多选图片批量去除水印文本
+- 使用WebUI降低使用门槛
 
 <p style="text-align:center;"><img src="https://github.com/YaoFANGUK/video-subtitle-remover/raw/main/design/demo.png" alt="demo.png"/></p>
 
-**使用说明：**
-
-- 有使用问题请加群讨论，QQ群：210150985（已满）、806152575（已满）、816881808（已满）、295894827
-- 直接下载压缩包解压运行，如果不能运行再按照下面的教程，尝试源码安装conda环境运行
+**VSR-WebUI使用说明**
+把源码下载下来
+进入命令行,安装依赖文件
+```bash
+pip install -r requirements.txt
+```
+之后启动webui
+```bash
+python webui.py
+```
+看看有没有ModuleNotFound的报错，它报错的意思是依赖的模块还没有导入
+啥模块没有导入你就导入啥模块，以下图为例操作如下
+```bash
+pip install fsplit
+```
+**VSR原项目使用说明：**
 
 **下载地址：**
 
@@ -53,9 +69,6 @@ Windows GPU版本v1.1.0（GPU）：
   # AMD / Intel 独显 集显
   docker run -it --name vsr --gpus all eritpchy/video-subtitle-remover:1.1.1-directml
 
-  # 演示视频, 输入
-  /vsr/test/test.mp4
-  docker cp vsr:/vsr/test/test_no_sub.mp4 ./
 ```
 
 ## 演示
@@ -68,102 +81,8 @@ Windows GPU版本v1.1.0（GPU）：
 
 <p style="text-align:center;"><a href="https://b23.tv/guEbl9C"><img src="https://github.com/YaoFANGUK/video-subtitle-remover/raw/main/design/demo.gif" alt="demo.gif"/></a></p>
 
-## 源码使用说明
 
-
-#### 1. 安装 Python
-
-请确保您已经安装了 Python 3.12+。
-
-- Windows 用户可以前往 [Python 官网](https://www.python.org/downloads/windows/) 下载并安装 Python。
-- MacOS 用户可以使用 Homebrew 安装：
-  ```shell
-  brew install python@3.12
-  ```
-- Linux 用户可以使用包管理器安装，例如 Ubuntu/Debian：
-  ```shell
-  sudo apt update && sudo apt install python3.12 python3.12-venv python3.12-dev
-  ```
-
-#### 2. 安装依赖文件
-
-请使用虚拟环境来管理项目依赖，避免与系统环境冲突。
-
-（1）创建虚拟环境并激活
-```shell
-python -m venv videoEnv
-```
-
-- Windows：
-```shell
-videoEnv\\Scripts\\activate
-```
-- MacOS/Linux：
-```shell
-source videoEnv/bin/activate
-```
-
-#### 3. 创建并激活项目目录
-
-切换到源码所在目录：
-```shell
-cd <源码所在目录>
-```
-> 例如：如果您的源代码放在 D 盘的 tools 文件夹下，并且源代码的文件夹名为 video-subtitle-remover，则输入：
-> ```shell
-> cd D:/tools/video-subtitle-remover-main
-> ```
-
-#### 4. 安装合适的运行环境
-
-本项目支持 CUDA（NVIDIA显卡加速）和 DirectML（AMD、Intel等GPU/APU加速）两种运行模式。
-
-##### (1) CUDA（NVIDIA 显卡用户）
-
-> 请确保您的 NVIDIA 显卡驱动支持所选 CUDA 版本。
-
-- 推荐 CUDA 11.8，对应 cuDNN 8.6.0。
-
-- 安装 CUDA：
-  - Windows：[CUDA 11.8 下载](https://developer.download.nvidia.com/compute/cuda/11.8.0/local_installers/cuda_11.8.0_522.06_windows.exe)
-  - Linux：
-    ```shell
-    wget https://developer.download.nvidia.com/compute/cuda/11.8.0/local_installers/cuda_11.8.0_520.61.05_linux.run
-    sudo sh cuda_11.8.0_520.61.05_linux.run
-    ```
-  - MacOS 不支持 CUDA。
-
-- 安装 cuDNN（CUDA 11.8 对应 cuDNN 8.6.0）：
-  - [Windows cuDNN 8.6.0 下载](https://developer.download.nvidia.cn/compute/redist/cudnn/v8.6.0/local_installers/11.8/cudnn-windows-x86_64-8.6.0.163_cuda11-archive.zip)
-  - [Linux cuDNN 8.6.0 下载](https://developer.download.nvidia.cn/compute/redist/cudnn/v8.6.0/local_installers/11.8/cudnn-linux-x86_64-8.6.0.163_cuda11-archive.tar.xz)
-  - 安装方法请参考 NVIDIA 官方文档。
-
-- 安装 PaddlePaddle GPU 版本（CUDA 11.8）：
-  ```shell
-  pip install paddlepaddle-gpu==3.0.0 -i https://www.paddlepaddle.org.cn/packages/stable/cu118/
-  ```
-- 安装 Torch GPU 版本（CUDA 11.8）：
-  ```shell
-  pip install torch==2.7.0 torchvision==0.22.0 --index-url https://download.pytorch.org/whl/cu118
-  ```
-
-- 安装其他依赖
-  ```shell
-  pip install -r requirements.txt
-  ```
-
-##### (2) DirectML（AMD、Intel等GPU/APU加速卡用户）
-
-- 适用于 Windows 设备的 AMD/NVIDIA/Intel GPU。
-- 安装 ONNX Runtime DirectML 版本：
-  ```shell
-  pip install paddlepaddle==3.0.0 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/
-  pip install -r requirements.txt
-  pip install torch_directml==0.2.5.dev240914
-  ```
-
-
-#### 4. 运行程序
+#### 4. 源码使用教程
 
 - 运行图形化界面
 
@@ -224,33 +143,3 @@ LAMA_SUPER_FAST = False  # 保证效果
 
 解决方案：升级7-zip解压程序到最新版本
 
-
-## 赞助
-
-<img src="https://github.com/YaoFANGUK/video-subtitle-extractor/raw/main/design/sponsor.png" width="600">
-
-| 捐赠者                       | 累计捐赠金额     | 赞助席位 |
-|---------------------------|------------| --- |
-| 坤V                        | 400.00 RMB | 金牌赞助席位 |
-| Jenkit                        | 200.00 RMB | 金牌赞助席位 |
-| 子车松兰                        | 188.00 RMB | 金牌赞助席位 |
-| 落花未逝                        | 100.00 RMB | 金牌赞助席位 |
-| 张音乐                        | 100.00 RMB | 金牌赞助席位 |
-| 麦格                        | 100.00 RMB | 金牌赞助席位 |
-| 无痕                        | 100.00 RMB | 金牌赞助席位 |
-| wr                        | 100.00 RMB | 金牌赞助席位 |
-| 陈                        | 100.00 RMB | 金牌赞助席位 |
-| lyons                        | 100.00 RMB | 金牌赞助席位 |
-| TalkLuv                   | 50.00 RMB  | 银牌赞助席位 |
-| 陈凯                        | 50.00 RMB  | 银牌赞助席位 |
-| Tshuang                   | 20.00 RMB  | 银牌赞助席位 |
-| 很奇异                       | 15.00 RMB  | 银牌赞助席位 |
-| 郭鑫                       | 12.00 RMB  | 银牌赞助席位 |
-| 生活不止眼前的苟且                        | 10.00 RMB  | 铜牌赞助席位 |
-| 何斐                        | 10.00 RMB  | 铜牌赞助席位 |
-| 老猫                        | 8.80 RMB   | 铜牌赞助席位 |
-| 伍六七                      | 7.77 RMB   | 铜牌赞助席位 |
-| 长缨在手                      | 6.00 RMB   | 铜牌赞助席位 |
-| 无忌                      | 6.00 RMB   | 铜牌赞助席位 |
-| Stephen                   | 2.00 RMB   | 铜牌赞助席位 |
-| Leo                       | 1.00 RMB   | 铜牌赞助席位 |
