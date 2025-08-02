@@ -20,6 +20,8 @@ VSR-WebUI主要实现了以下功能：
 
 <p style="text-align:center;"><img src="https://github.com/AntheaLaffy/vsr-webui/raw/main/test/webui.png" alt="webui"/></p>
 
+PS:前端程序的预览图片渲染可能有点问题，但问题不大，不影响后端处理结果，就当是一个彩蛋咯
+
 **VSR-WebUI使用说明**
 
 把源码下载下来
@@ -45,8 +47,6 @@ python webui.py
 ```
 
 **VSR原项目使用说明：**
-
-<p style="text-align:center;"><img src="https://github.com/YaoFANGUK/video-subtitle-remover/raw/main/design/demo.png" alt="demo.png"/></p>
 
 **下载地址：**
 
