@@ -3,7 +3,7 @@
 ## 项目简介
 
 ![License](https://img.shields.io/badge/License-Apache%202-red.svg)
-![python version](https://img.shields.io/badge/Python-3.11+-blue.svg)
+![python version](https://img.shields.io/badge/Python-3.10+-blue.svg)
 ![support os](https://img.shields.io/badge/OS-Windows/macOS/Linux-green.svg)  
 
 VSR-WebUI fork自YaoFANGUK的VSR项目，继承GPL v2协议
@@ -21,6 +21,7 @@ VSR-WebUI主要实现了以下功能：
 <p style="text-align:center;"><img src="https://github.com/YaoFANGUK/video-subtitle-remover/raw/main/design/demo.png" alt="demo.png"/></p>
 
 **VSR-WebUI使用说明**
+
 把源码下载下来
 进入命令行,安装依赖文件
 ```bash
@@ -30,11 +31,19 @@ pip install -r requirements.txt
 ```bash
 python webui.py
 ```
-看看有没有ModuleNotFound的报错，它报错的意思是依赖的模块还没有导入
-啥模块没有导入你就导入啥模块，以下图为例操作如下
+看看有没有ModuleNotFound的报错，它的意思是依赖的模块还没有导入
+以下图为例操作如下:
+<p style="text-align:center;"><img src="https://github.com/AntheaLaffy/vsr-webui/raw/main/test/依赖找不到报错.png" alt="demo.png"/></p>
+你别管图上错误追踪是啥意思，看最下方一行报错就了，缺失fsplit模块，你就导入fsplit模块，缺啥你导啥
+
 ```bash
 pip install fsplit
 ```
+然后继续重启webui直到成功为止
+```bash
+python webui.py
+```
+
 **VSR原项目使用说明：**
 
 **下载地址：**
