@@ -251,15 +251,16 @@ class SubtitleRemoverWebUI:
             # 创建字幕提取器
             subtitle_area = (self.ymin, self.ymax, self.xmin, self.xmax)
 
+
             # 创建配置字典 - 确保值在合理范围内
             safe_params = {
                 "mode": str(params["mode"]),  # 确保是字符串
                 "sttn_skip_detection": bool(params["sttn_skip_detection"]),
-                "sttn_neighbor_stride": max(1, min(int(params["sttn_neighbor_stride"]), 200)),
-                "sttn_reference_length": max(1, min(int(params["sttn_reference_length"]), 100)),
-                "sttn_max_load_num": max(50, min(int(params["sttn_max_load_num"]), 500)),
+                "sttn_neighbor_stride": max(1, min(int(params["sttn_neighbor_stride"]), 800)),
+                "sttn_reference_length": max(1, min(int(params["sttn_reference_length"]), 400)),
+                "sttn_max_load_num": max(50, min(int(params["sttn_max_load_num"]), 2000)),
                 "lama_super_fast": bool(params["lama_super_fast"]),
-                "propainter_max_load_num": max(20, min(int(params["propainter_max_load_num"]), 1000))
+                "propainter_max_load_num": max(20, min(int(params["propainter_max_load_num"]), 4000))
             }
 
             # 打印参数用于调试
@@ -270,7 +271,8 @@ class SubtitleRemoverWebUI:
                 self.video_path,
                 subtitle_area,
                 True,
-                safe_params
+                safe_params,
+                self.abort_event
             )
 
             # 新增：传递中止事件给SubtitleRemover
@@ -298,6 +300,12 @@ class SubtitleRemoverWebUI:
 
             # 更新进度
             while self.processing_thread.is_alive():
+                # 检查是否中止
+                if self.abort_event.is_set():
+                    self.status = "正在中止处理..."
+                    progress(0, desc=self.status)
+                    break
+
                 if self.sr:
                     self.progress = self.sr.progress_total
                     if self.sr.preview_frame is not None:
@@ -310,10 +318,11 @@ class SubtitleRemoverWebUI:
                 if self.abort_event.is_set():
                     break
 
-            # 处理完成或中止
+            # 确保线程结束后再返回
             if self.abort_event.is_set():
-                self.status = "处理已中止"
-                return self.preview_frame, self.status
+                # 等待线程完全结束
+                self.processing_thread.join(timeout=2.0)
+                return self.preview_frame, "处理已中止"
             else:
                 return self.preview_frame, self.status
         except Exception as e:
@@ -326,6 +335,15 @@ class SubtitleRemoverWebUI:
         if self.is_processing:
             self.abort_event.set()
             self.status = "正在中止处理..."
+
+            # 尝试强制停止处理线程
+            if self.processing_thread and self.processing_thread.is_alive():
+                try:
+                    # 非阻塞方式尝试停止
+                    self.processing_thread.join(timeout=1.0)
+                except RuntimeError:
+                    pass
+
             print("中止请求已发送")
             return "中止请求已发送"
         else:
@@ -345,25 +363,25 @@ class SubtitleRemoverWebUI:
             # STTN参数
             with gr.Group(visible=True) as sttn_params:
                 sttn_skip_detection = gr.Checkbox(
-                    label="跳过字幕检测（极度不推荐）",
+                    label="跳过字幕检测",
                     value=self.algorithm_params["sttn_skip_detection"],
                     interactive=True
                 )
                 sttn_neighbor_stride = gr.Slider(
-                    minimum=1, maximum=50, step=1,
-                    label="相邻帧步长（值越大速度越快）",
+                    minimum=1, maximum=200, step=1,
+                    label="相邻帧步长（增大此值，提速）",
                     value=self.algorithm_params["sttn_neighbor_stride"],
                     interactive=True
                 )
                 sttn_reference_length = gr.Slider(
-                    minimum=1, maximum=50, step=1,
-                    label="参考帧长度（值越大效果越好）",
+                    minimum=1, maximum=200, step=1,
+                    label="参考帧长度（增大此值，降速增强效果）",
                     value=self.algorithm_params["sttn_reference_length"],
                     interactive=True
                 )
                 sttn_max_load_num = gr.Slider(
-                    minimum=10, maximum=200, step=5,
-                    label="批处理大小（值越大效果越好）",
+                    minimum=10, maximum=2000, step=5,
+                    label="批处理大小（增大此值，提速增强效果，显存占用增大）",
                     value=self.algorithm_params["sttn_max_load_num"],
                     interactive=True
                 )
@@ -379,7 +397,7 @@ class SubtitleRemoverWebUI:
             # PROPAINTER参数
             with gr.Group(visible=False) as propainter_params:
                 propainter_max_load_num = gr.Slider(
-                    minimum=10, maximum=200, step=5,
+                    minimum=10, maximum=4000, step=5,
                     label="最大处理帧数（值越大效果越好）",
                     value=self.algorithm_params["propainter_max_load_num"],
                     interactive=True
@@ -477,7 +495,7 @@ class SubtitleRemoverWebUI:
                     process_btn = gr.Button("开始去除字幕", variant="primary")
 
                     # 新增：中止按钮
-                    abort_btn = gr.Button("中止处理", variant="stop")
+                    abort_btn = gr.Button("中止处理(这个按钮没卵用)", variant="stop")
 
                     # 进度条
                     progress_bar = gr.HTML("<div style='margin-top:10px;'><b>处理进度:</b></div>")
@@ -625,7 +643,7 @@ class SubtitleRemoverWebUI:
 
                 3. **算法参数设置**:
                    - STTN算法：适合真人视频，速度快
-                     - 跳过字幕检测：不能提高速度但可能遗漏字幕
+                     - 跳过字幕检测：加快速度，但可能出现漏帧等情况
                      - 相邻帧步长：值越大处理速度越快
                      - 参考帧长度：值越大效果越好，但太大可能爆显存
                      - 最大处理帧数：值越大效果越好
