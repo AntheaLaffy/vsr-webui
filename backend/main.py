@@ -84,7 +84,14 @@ class SubtitleDetect:
         current_frame_no = 0
         subtitle_frame_no_box_dict = {}
         print('[Processing] start finding subtitles...')
+
+        # 添加中止检查
         while video_cap.isOpened():
+            # 检查是否已中止
+            if sub_remover and sub_remover.abort_event and sub_remover.abort_event.is_set():
+                print("字幕检测已中止")
+                break
+
             ret, frame = video_cap.read()
             # 如果读取视频帧失败（视频读到最后一帧）
             if not ret:
@@ -567,11 +574,14 @@ class SubtitleDetect:
 
 
 class SubtitleRemover:
-    def __init__(self, vd_path, sub_area=None, gui_mode=False, custom_config=None):  # 添加 custom_config 参数
+    def __init__(self, vd_path, sub_area=None, gui_mode=False, custom_config=None, abort_event=None):  # 添加 abort_event 参数
         importlib.reload(config)
         print(f"Initializing SubtitleRemover with config: {custom_config}")
         # 新增：中止事件
         self.abort_event = None  # 将在运行时由WebUI设置
+
+        # 存储中止事件
+        self.abort_event = abort_event or threading.Event()
 
         # 应用自定义配置
         if custom_config:
@@ -608,13 +618,13 @@ class SubtitleRemover:
                         config_value = max(1, int(value))  # 确保至少为1
                         # 应用额外范围限制
                         if key == "sttn_neighbor_stride":
-                            config_value = min(config_value, 200)
+                            config_value = min(config_value, 800)
                         elif key == "sttn_reference_length":
-                            config_value = min(config_value, 100)
+                            config_value = min(config_value, 400)
                         elif key == "sttn_max_load_num":
-                            config_value = max(50, min(config_value, 500))
+                            config_value = max(50, min(config_value, 2000))
                         elif key == "propainter_max_load_num":
-                            config_value = max(20, min(config_value, 1000))
+                            config_value = max(20, min(config_value, 4000))
 
                         print(f"Setting {key.upper()} to {config_value}")
                         setattr(config, key.upper(), config_value)
@@ -746,6 +756,10 @@ class SubtitleRemover:
         print('[Processing] start removing subtitles...')
         index = 0
         while True:
+            # 添加中止检查
+            if self.abort_event.is_set():
+                print("PROPAINTER模式处理已中止")
+                break
             ret, frame = self.video_cap.read()
             if not ret:
                 break
@@ -836,8 +850,9 @@ class SubtitleRemover:
             ymin, ymax, xmin, xmax = 0, self.frame_height, 0, self.frame_width
         mask_area_coordinates = [(xmin, xmax, ymin, ymax)]
         mask = create_mask(self.mask_size, mask_area_coordinates)
-        sttn_video_inpaint = STTNVideoInpaint(self.video_path)
+        sttn_video_inpaint = STTNVideoInpaint(self.video_path, self.abort_event) #传递中止事件
         sttn_video_inpaint(input_mask=mask, input_sub_remover=self, tbar=tbar)
+
 
     def sttn_mode(self, tbar):
         # 是否跳过字幕帧寻找
@@ -921,6 +936,9 @@ class SubtitleRemover:
         index = 0
         print('[Processing] start removing subtitles...')
         while True:
+            if self.abort_event.is_set():
+                print("LAMA模式处理已中止")
+                break
             ret, frame = self.video_cap.read()
             if not ret:
                 break
@@ -955,6 +973,12 @@ class SubtitleRemover:
         tbar = tqdm(total=int(self.frame_count), unit='frame', position=0, file=sys.__stdout__,
                     desc='Subtitle Removing')
         try:
+            # 新增：开始处理前检查中止
+            # 在关键位置添加中止检查
+            if self.abort_event.is_set():
+                print("处理已中止")
+                return
+
             if self.is_picture:
                 sub_list = self.sub_detector.find_subtitle_frame_no(sub_remover=self)
                 self.lama_inpaint = LamaInpaint()
@@ -974,18 +998,12 @@ class SubtitleRemover:
                     print("处理已中止")
                     return
             else:
-                # 精准模式下，获取场景分割的帧号，进一步切割
                 if config.MODE == config.InpaintMode.PROPAINTER:
                     self.propainter_mode(tbar)
                 elif config.MODE == config.InpaintMode.STTN:
                     self.sttn_mode(tbar)
                 else:
                     self.lama_mode(tbar)
-
-                    # 新增：添加中止检查点
-                    if self.abort_event and self.abort_event.is_set():
-                        print("处理已中止")
-                        return
 
             self.video_cap.release()
             self.video_writer.release()
