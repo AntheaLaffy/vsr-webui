@@ -221,6 +221,15 @@ class STTNInpaint:
 
 
 class STTNVideoInpaint:
+    def __init__(self, video_path, abort_event=None):
+        self.abort_event = abort_event or threading.Event()
+
+    def inpaint(self, mask, sub_remover, tbar):
+        # 在处理循环中添加检查
+        for batch in batches:
+            if self.abort_event.is_set():
+                print("STTN处理已中止")
+                return
 
     def read_frame_info_from_video(self):
         # 使用opencv读取视频
